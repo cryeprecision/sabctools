@@ -70,6 +70,10 @@ def sabctools_yenc_wrapper(data: bytearray) -> Tuple[bytearray, str, int, int, i
     return decoded_data, correct_unknown_encoding(filename), filesize, begin, size, crc_correct
 
 
+def sabctools_yenc_raw_wrapper(data: bytearray) -> bytearray:
+    return sabctools.yenc_decode_raw(memoryview(data))
+
+
 def python_yenc(data_plain):
     """Use the older decoder to verify the new one"""
     data = []

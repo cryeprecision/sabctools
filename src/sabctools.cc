@@ -35,10 +35,22 @@ static PyMethodDef sabctools_methods[] = {
         "yenc_decode(raw_data)"
     },
     {
+        "yenc_decode_raw",
+        yenc_decode_raw,
+        METH_O,
+        "yenc_decode_raw(data_block)"
+    },
+    {
         "yenc_encode",
         yenc_encode,
         METH_O,
         "yenc_encode(input_string)"
+    },
+    {
+        "yenc_encode_raw",
+        yenc_encode_raw,
+        METH_O,
+        "yenc_encode_raw(input_bytes)"
     },
     {
         "unlocked_ssl_recv_into",

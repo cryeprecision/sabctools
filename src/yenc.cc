@@ -244,6 +244,40 @@ finish:
     return retval;
 }
 
+PyObject *yenc_decode_raw(PyObject *self, PyObject *Py_memoryview_obj) {
+    (void)self;
+
+    if (!PyMemoryView_Check(Py_memoryview_obj)) {
+        PyErr_SetString(PyExc_TypeError, "Expected memoryview");
+        return NULL;
+    }
+
+    Py_buffer *Py_buffer_obj = PyMemoryView_GET_BUFFER(Py_memoryview_obj);
+    if (!PyBuffer_IsContiguous(Py_buffer_obj, 'C') || Py_buffer_obj->len < 0) {
+        PyErr_SetString(PyExc_ValueError, "Invalid data length or order");
+        return NULL;
+    }
+
+    char *cur_char = (char *)Py_buffer_obj->buf;
+    size_t input_len = (size_t)Py_buffer_obj->len;
+
+    PyObject *Py_output_bytearray = PyByteArray_FromStringAndSize(NULL, input_len);
+    if (!Py_output_bytearray) {
+        PyErr_SetNone(PyExc_MemoryError);
+        return NULL;
+    }
+    char *dest_loc = PyByteArray_AsString(Py_output_bytearray);
+
+    size_t output_len;
+    Py_BEGIN_ALLOW_THREADS;
+    RapidYenc::YencDecoderState state = RapidYenc::YDEC_STATE_CRLF;
+    output_len = RapidYenc::decode(1, cur_char, dest_loc, input_len, &state);
+    Py_END_ALLOW_THREADS;
+
+    PyByteArray_Resize(Py_output_bytearray, output_len);
+    return Py_output_bytearray;
+}
+
 static inline size_t YENC_MAX_SIZE(size_t len, size_t line_size) {
     size_t ret = len * 2    /* all characters escaped */
         + 2 /* allocation for offset and that a newline may occur early */
@@ -303,4 +337,31 @@ PyObject* yenc_encode(PyObject* self, PyObject* Py_input_string)
     Py_XDECREF(Py_output_string);
     free(output_buffer);
     return retval;
+}
+
+PyObject *yenc_encode_raw(PyObject *self, PyObject *Py_input_string)
+{
+    (void)self;
+
+    if (!PyBytes_Check(Py_input_string)) {
+        PyErr_SetString(PyExc_TypeError, "Expected bytes");
+        return NULL;
+    }
+
+    size_t input_len = PyBytes_Size(Py_input_string);
+    char *input_buffer = (char *)PyBytes_AsString(Py_input_string);
+    char *output_buffer = (char *)malloc(YENC_MAX_SIZE(input_len, YENC_LINESIZE));
+
+    if(!output_buffer)
+        return PyErr_NoMemory();
+ 
+    size_t output_len;
+    Py_BEGIN_ALLOW_THREADS;
+    int column = 0;
+    output_len = RapidYenc::encode(YENC_LINESIZE, &column, input_buffer, output_buffer, input_len, 1);
+    Py_END_ALLOW_THREADS;
+
+    PyObject *Py_output_string = PyBytes_FromStringAndSize((char *)output_buffer, output_len);
+    free(output_buffer);
+    return Py_output_string;
 }

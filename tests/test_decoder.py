@@ -4,11 +4,25 @@ import glob
 from tests.testsupport import *
 
 
+def extract_data_block(data: bytearray) -> bytearray:
+    start = data.find(b"=ypart ")
+    start = data.find(b"\r\n", start) + 2
+    end = data.rfind(b"=yend ")
+    return data[start:end]
+
+
 def test_regular():
     data_plain = read_plain_yenc_file("test_regular.yenc")
     assert python_yenc(data_plain) == sabctools_yenc_wrapper(data_plain)
     data_plain = read_plain_yenc_file("test_regular_2.yenc")
     assert python_yenc(data_plain) == sabctools_yenc_wrapper(data_plain)
+
+
+def test_regular_raw():
+    data_plain = read_plain_yenc_file("test_regular.yenc")
+    assert python_yenc(data_plain)[0] == sabctools_yenc_raw_wrapper(extract_data_block(data_plain))
+    data_plain = read_plain_yenc_file("test_regular_2.yenc")
+    assert python_yenc(data_plain)[0] == sabctools_yenc_raw_wrapper(extract_data_block(data_plain))
 
 
 def test_bytes_compat():
